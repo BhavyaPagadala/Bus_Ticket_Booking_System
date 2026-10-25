@@ -1,0 +1,2 @@
+import axios from 'axios';
+const api=axios.create({baseURL:import.meta.env.VITE_API_BASE_URL||window.location.protocol+'//'+window.location.hostname+':5000/api'});api.interceptors.request.use(c=>{const t=localStorage.getItem('token');if(t)c.headers.Authorization=`Bearer ${t}`;return c;});api.interceptors.response.use(r=>r.data,e=>{if(e.response?.status===401){localStorage.removeItem('token');localStorage.removeItem('user');}return Promise.reject(new Error(e.response?.data?.message||'Could not reach the service. Try again.'));});export default api;

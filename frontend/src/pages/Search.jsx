@@ -1,0 +1,15 @@
+import {useEffect,useState} from 'react';
+import {Link,useSearchParams} from 'react-router-dom';
+import {ArrowRight,Clock3,MapPin} from 'lucide-react';
+import api from '../services/api';
+export default function Search(){
+  const [q]=useSearchParams(),[trips,setTrips]=useState([]),[error,setError]=useState(''),[sort,setSort]=useState('departureDateTime'),[type,setType]=useState('');
+  useEffect(()=>{api.get('/trips/search',{params:{source:q.get('source'),sourceStation:q.get('sourceStation'),destination:q.get('destination'),destinationStation:q.get('destinationStation'),date:q.get('date')}}).then(r=>setTrips(r.trips)).catch(e=>setError(e.message))},[q]);
+  const shown=trips.filter(t=>!type||t.busId.busType===type).sort((a,b)=>sort==='farePerSeat'?a.farePerSeat-b.farePerSeat:new Date(a[sort])-new Date(b[sort]));
+  return <main className="page"><div className="page-heading"><div><span className="eyebrow">YOUR NEXT JOURNEY</span><h1>{q.get('source')} <span className="muted">to</span> {q.get('destination')}</h1><p>{q.get('sourceStation')} → {q.get('destinationStation')} · {q.get('date')} · {trips.length} trip{trips.length===1?'':'s'} found</p></div></div>
+    <div className="filters"><label>Bus type<select value={type} onChange={e=>setType(e.target.value)}><option value="">All types</option><option>Standard Seater</option><option>Premium Seater</option></select></label><label>Sort by<select value={sort} onChange={e=>setSort(e.target.value)}><option value="departureDateTime">Departure</option><option value="farePerSeat">Lowest fare</option><option value="arrivalDateTime">Arrival</option></select></label></div>
+    {error&&<div className="error-box">{error}</div>}
+    {!error&&!shown.length&&<div className="empty-state"><MapPin size={28}/><h2>No trips at these stations yet</h2><p>Try another date or boarding station.</p><Link className="button" to="/">Change search</Link></div>}
+    <div className="trip-list">{shown.map(t=><article className="trip-card" key={t._id}><div className="operator"><div className="operator-mark">W</div><div><b>{t.busId.operatorName}</b><small>{t.busId.busType} · {t.busId.busNumber}</small></div></div><div className="trip-time"><strong>{new Date(t.departureDateTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'})}</strong><small>{t.source}</small><small className="station-name">{t.sourceStation}</small></div><div className="duration"><span/><small><Clock3 size={13}/> {Math.round((new Date(t.arrivalDateTime)-new Date(t.departureDateTime))/3600000)}h journey</small></div><div className="trip-time"><strong>{new Date(t.arrivalDateTime).toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',timeZone:'Asia/Kolkata'})}</strong><small>{t.destination}</small><small className="station-name">{t.destinationStation}</small></div><div className="trip-price"><small>{t.availableSeats} seats left</small><strong>₹{t.farePerSeat}</strong><span>per seat</span></div><Link to={'/trip/'+t._id} className="button">Choose seats <ArrowRight size={15}/></Link></article>)}</div>
+  </main>
+}

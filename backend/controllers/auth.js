@@ -1,0 +1,6 @@
+import bcrypt from 'bcryptjs';import jwt from 'jsonwebtoken';import User from '../models/User.js';import {AppError} from '../utils/errors.js';
+const tokenFor=user=>jwt.sign({id:user.id},process.env.JWT_SECRET,{expiresIn:'1h'});
+const safe=user=>({id:user.id,name:user.name,email:user.email,phone:user.phone,role:user.role});
+export async function register(req,res){const {name,email,phone,password}=req.body;if(!name||!/^\S+@\S+\.\S+$/.test(email||'')||!/^\+?[0-9\s()-]{7,20}$/.test(phone||'')||!password||password.length<8)throw new AppError('Enter a name, valid email and phone, and a password of at least 8 characters.');if(await User.exists({email:email.toLowerCase()}))throw new AppError('An account with this email already exists.',409);const user=await User.create({name,email,phone,password:await bcrypt.hash(password,12)});res.status(201).json({token:tokenFor(user),user:safe(user)});}
+export async function login(req,res){const {email,password}=req.body;const user=await User.findOne({email:String(email||'').toLowerCase()}).select('+password');if(!user||!await bcrypt.compare(password||'',user.password))throw new AppError('Email or password is incorrect.',401);res.json({token:tokenFor(user),user:safe(user)});}
+export function me(req,res){res.json({user:safe(req.user)});}
